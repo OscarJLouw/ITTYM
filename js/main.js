@@ -8,7 +8,9 @@ var debug, _width, _height, PI, Utils, CUBE_SIZE, GRID, TOTAL_CUBES, WALL_SIZE, 
 
 var composer, renderPass, pass1, pass2, pass3;
 
-var mouse, raycaster;
+
+
+var mouse, raycaster, INTERSECTED;
 var textureLoader = new THREE.TextureLoader();
 var selectionTexture = textureLoader.load("textures/selectionTexture.png");
 var spriteMaterial = new THREE.SpriteMaterial({ map: selectionTexture, color: 0x000000 });
@@ -41,25 +43,25 @@ var planetColors = [
 var planetGeometries = [];
 var planetObjects = [];
 renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
-camera = new THREE.PerspectiveCamera(45, (_width / _height), 0.1, 10000)
+camera = new THREE.PerspectiveCamera(45, (_width / _height), 0.1, 20000)
 
 var clock = new THREE.Clock();
-/*
+
 controls = new THREE.TrackballControls(camera);
-controls.rotateSpeed = 1.0;
-controls.zoomSpeed = 1.2;
+controls.rotateSpeed = 1.5;
+controls.zoomSpeed = 0.7;
 controls.panSpeed = 0.8;
 controls.noZoom = false;
 controls.noPan = true;
 controls.staticMoving = false;
 controls.dynamicDampingFactor = 0.15;
 controls.minDistance = 500;
-controls.maxDistance = 1200;
+controls.maxDistance = 5000;
 controls.maxPolarAngle = PI / 2 - 0.05;
 controls.autoRotate = true;
 controls.autoRotateSpeed = -0.1;
-*/
 
+/*
 controls = new THREE.OrbitControls(camera);
 controls.enableDamping = true;
 controls.dampingFactor = 0.1;
@@ -72,6 +74,7 @@ controls.maxDistance = 5000;
 //controls.maxPolarAngle = PI / 2 - 0.05;
 controls.autoRotate = true;
 controls.autoRotateSpeed = -0.1;
+*/
 
 scene = new THREE.Scene();
 group = new THREE.Object3D();
@@ -95,6 +98,8 @@ setupStar(group);
 setupPlanets(group);
 
 
+var outlinePass = new THREE.OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
+
 scene.add(group);
 setupRenderer(document.body)
 
@@ -111,6 +116,7 @@ controls.addEventListener('start', function () {
 
 document.addEventListener('mousedown', onDocumentMouseDown, false);
 document.addEventListener('touchstart', onDocumentTouchStart, false);
+
 
 
 /* -- -- */
@@ -134,6 +140,7 @@ function resizeHandler() {
     renderer.setSize(_width, _height);
     renderer.setPixelRatio(pixelRatio);
     composer.setSize(_width * pixelRatio, _height * pixelRatio);
+    outlinePass.resolution = new THREE.Vector2(_width * pixelRatio, _height * pixelRatio);
     //controls.handleResize();
     /*
     let pixelRatio = window.devicePixelRatio || 0;
@@ -154,45 +161,42 @@ function setupCamera(x, y, z) {
 
 }
 
-function setupStar(parent)
-{
-    var starColor = (function() {
+function setupStar(parent) {
+    var starColor = (function () {
         var colors = [0x000000, 0x000000, 0x000000, 0x000000];
         //var colors = [0xFFFF00, 0x559999, 0xFF6339, 0xFFFFFF];
         return colors[Math.floor(Math.random() * colors.length)];
-      })(),
-      star = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(30, 1),
-        new THREE.MeshBasicMaterial({
-          color: 0xFFFFFF,
-        })
-      ),
-      glows = [];
-    
+    })(),
+        star = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(30, 1),
+            new THREE.MeshBasicMaterial({
+                color: 0x000000,
+            })
+        ),
+        glows = [];
+
     star.castShadow = false;
     scene.add(star);
-    
-    for (var i = 1, scaleX = 1.1, scaleY = 1.1, scaleZ = 1.1; i < 5; i++) {
-      var starGlow = new THREE.Mesh(
-        new THREE.IcosahedronGeometry(30, 1),
-        new THREE.MeshBasicMaterial({
-          color: starColor,
-          transparent: true,
-          opacity: 0.5
-        })
-      );
-      starGlow.castShadow = false;
-      scaleX += 0.4 + Math.random() * .5;
-      scaleY += 0.4 + Math.random() * .5;
-      scaleZ += 0.4 + Math.random() * .5;
-      starGlow.scale.set(scaleX, scaleY, scaleZ);
-      starGlow.origScale = {
-        x: scaleX,
-        y: scaleY,
-        z: scaleZ
-      };
-      glows.push(starGlow);
-      scene.add(starGlow);
+
+    for (var i = 1, scale = 1.1, scale = 1.1, scale = 1.1; i < 5; i++) {
+        var starGlow = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(30, 1),
+            new THREE.MeshBasicMaterial({
+                color: starColor,
+                transparent: true,
+                opacity: 0.5
+            })
+        );
+        starGlow.castShadow = false;
+        scale += 0.4 + Math.random() * .5;
+        starGlow.scale.set(scale, scale, scale);
+        starGlow.origScale = {
+            x: scale,
+            y: scale,
+            z: scale
+        };
+        glows.push(starGlow);
+        scene.add(starGlow);
     }
 }
 
@@ -230,7 +234,7 @@ function setupPlanets(parent) {
         var planetWithOrbit = new THREE.Object3D();
 
         var orbitRadius = Math.random() * 50 + 200 + radii;
-        var orbitSpeed =  THREE.Math.randFloat(50, 200);
+        var orbitSpeed = THREE.Math.randFloat(50 + p * 5, 200 + p * 5);
         //planet.position.set(planet.orbitRadius, 0, 0);
 
         switch (planetShapes[planetShape]) {
@@ -238,14 +242,15 @@ function setupPlanets(parent) {
                 geometry = new THREE.SphereGeometry(size, THREE.Math.randInt(3, 10), THREE.Math.randInt(2, 10));
                 break;
             case "ConeGeometry":
-                geometry = new THREE.ConeGeometry(size, THREE.Math.randInt(2*size/3, size), THREE.Math.randInt(3, 8));
+                geometry = new THREE.ConeGeometry(size, THREE.Math.randInt(2 * size / 3, size), THREE.Math.randInt(3, 8));
                 break;
             case "TorusGeometry":
                 geometry = new THREE.TorusGeometry(size, THREE.Math.randInt(size / 4, size), THREE.Math.randInt(3, 10), THREE.Math.randInt(3, 10));
                 break;
             case "TorusKnotGeometry":
+                var pValues = [1, 2, 4, 5, 7, 8, 10, 11];
                 geometry = new THREE.TorusKnotGeometry(size, THREE.Math.randInt(size / 3, size / 2), 64, THREE.Math.randInt(3, 8),
-                    RandomRangeExcept(1, 6, 3),
+                    pValues[THREE.Math.randInt(0, pValues.length)],
                     3);
                 break;
             case "TetrahedronGeometry":
@@ -261,8 +266,10 @@ function setupPlanets(parent) {
                 geometry = new THREE.IcosahedronGeometry(size, detail);
                 break;
         }
-        
-        geometry.computeFlatVertexNormals ()
+
+        planet.size = size;
+
+        geometry.computeFlatVertexNormals()
 
         planetGeom = new THREE.Mesh(geometry, material);
 
@@ -270,7 +277,7 @@ function setupPlanets(parent) {
         planetGeom.receiveShadow = true;
 
         planetGeom.position.set(orbitRadius, 0, 0);
-        
+
         planet.add(planetGeom);
         planetGeometries.push(planetGeom);
 
@@ -308,17 +315,17 @@ function setupPlanets(parent) {
                 configRotation
             )
 
-            
+
 
             atmoGeom.position.set(orbitRadius, 0, 0);
 
         }
 
         radii = orbitRadius + size;
-        
 
-        var orbitInitialRotation = new THREE.Vector3( THREE.Math.degToRad(Math.random() * 180), THREE.Math.degToRad(Math.random() * 180), THREE.Math.degToRad(Math.random() * 180) );
-        
+
+        var orbitInitialRotation = new THREE.Vector3(THREE.Math.degToRad(Math.random() * 180), THREE.Math.degToRad(Math.random() * 180), THREE.Math.degToRad(Math.random() * 180));
+
         //planet.rotation = orbitInitialRotation;
         //planet.rotation.x = orbitInitialRotation.x;
         //planet.rotation.y = orbitInitialRotation.y;
@@ -351,7 +358,7 @@ function setupPlanets(parent) {
             })
         );
         orbit.geometry.vertices.shift();
-        
+
         //orbit.rotation.x = orbitInitialRotation.x;
         //orbit.rotation.y = orbitInitialRotation.y;
         //orbit.rotation.z = orbitInitialRotation.z;
@@ -450,26 +457,86 @@ function setupRenderer(parent) {
     rgbShiftPass = new THREE.ShaderPass(THREE.RGBShiftShader);
     rgbShiftPass.uniforms["amount"].value = 0.001;
 
+    /*
+    outlinePass.visibleEdgeColor = new THREE.Color( 0, 1, 0 );
+    outlinePass.hiddenEdgeColor = new THREE.Color( 0, 1, 0 );
+	outlinePass.edgeThickness = 100.0;
+    outlinePass.edgeStrength = 100.0;
+    */
+
     //renderPass.renderToScreen = true;
     //sobelPass.renderToScreen = true;
-    //filmPass.renderToScreen = true;
-    rgbShiftPass.renderToScreen = true;
+    filmPass.renderToScreen = true;
+    //rgbShiftPass.renderToScreen = true;
 
     composer.addPass(renderPass);
+    //composer.addPass(outlinePass);
     //composer.addPass(sobelPass);
     composer.addPass(filmPass);
-    composer.addPass(rgbShiftPass);
+    //composer.addPass(rgbShiftPass);
 }
 
-function render() {
 
-    if(cameraTarget){
+window.addEventListener('mousemove', onTouchMove);
+window.addEventListener('touchmove', onTouchMove);
+function onTouchMove(event) {
+    var x, y;
+    if (event.changedTouches) {
+        x = event.changedTouches[0].pageX;
+        y = event.changedTouches[0].pageY;
+    } else {
+        x = event.clientX;
+        y = event.clientY;
+    }
+    mouse.x = (x / window.innerWidth) * 2 - 1;
+    mouse.y = - (y / window.innerHeight) * 2 + 1;
+    checkIntersection();
+}
+
+function addSelectedObject(object) {
+    selectedObjects = [];
+    selectedObjects.push(object);
+}
+
+function checkIntersection() {
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObjects(planetGeometries, true);
+    if (intersects.length > 0) {
+        // if the closest object intersected is not the currently stored intersection object
+        if (intersects[0].object != INTERSECTED) {
+            // restore previous intersection object (if it exists) to its original color
+            if (INTERSECTED)
+                INTERSECTED.material.color.setHex(INTERSECTED.currentHex);
+            // store reference to closest object as current intersection object
+            INTERSECTED = intersects[0].object;
+            // store color of closest object (for later restoration)
+            INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+            // set a new color for closest object
+            INTERSECTED.material.emissive.setHex(0x00ffff);
+        }
+    }
+    else // there are no intersections
+    {
+        // restore previous intersection object (if it exists) to its original color
+        if (INTERSECTED)
+            INTERSECTED.material.emissive.setHex(0x000000);
+        // remove previous intersection object reference
+        //     by setting current intersection object to "nothing"
+        INTERSECTED = null;
+    }
+}
+
+
+function render() {
+    checkIntersection();
+    
+    if (cameraTarget) {
         controls.enableZoom = false;
-        controls.minDistance = 300;
-        controls.maxDistance = 300;
+        controls.minDistance = 200;
+        controls.maxDistance = 200;
 
         var vector = new THREE.Vector3();
-        controls.target.copy( vector.setFromMatrixPosition( cameraTarget.matrixWorld ) );
+        controls.target.copy(vector.setFromMatrixPosition(cameraTarget.matrixWorld));
         //camera.position.copy( cameraTarget.position );
         //camera.position.copy( new THREE.Vector3(0,100,0) );
     }
@@ -500,7 +567,7 @@ function onDocumentMouseDown(event) {
 
     raycaster.setFromCamera(mouse, camera);
 
-    var intersects = raycaster.intersectObjects(planetGeometries, true);
+    var intersects = raycaster.intersectObjects(planetObjects, true);
 
     if (intersects.length > 0) {
 
@@ -508,19 +575,18 @@ function onDocumentMouseDown(event) {
 
         var particle = new THREE.Sprite(spriteMaterial);
 
-        var vector = new THREE.Vector3().copy( intersects[ 0 ].point );
-        intersects[ 0 ].object.worldToLocal( vector );
+        var vector = new THREE.Vector3().copy(intersects[0].point);
+        intersects[0].object.worldToLocal(vector);
 
         particle.position.copy(vector);
         particle.scale.x = particle.scale.y = 5;
         intersects[0].object.add(particle);
 
         cameraTarget = intersects[0].object;
-        //console.log(intersects[0].object.position);
 
         //controls.target.set(intersects[0].object.position);
-        controls.target.copy( intersects[0].point );
-        camera.position.copy( intersects[0].point );
+        controls.target.copy(intersects[0].point);
+        camera.position.copy(intersects[0].point);
     }
 
     /*
@@ -534,9 +600,9 @@ function onDocumentMouseDown(event) {
 }
 
 
-function RandomRangeExcept (min, max, except) {
+function RandomRangeExcept(min, max, except) {
     do {
-        var number = THREE.Math.randInt (min, max);
+        var number = THREE.Math.randInt(min, max);
     } while (number == except);
     return number;
 }

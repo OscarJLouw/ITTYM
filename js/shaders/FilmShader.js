@@ -29,7 +29,7 @@ THREE.FilmShader = {
 		"nIntensity": { value: 0.5 },
 		"sIntensity": { value: 0.05 },
 		"sCount":     { value: 4096 },
-		"grayscale":  { value: 1 }
+		"grayscale":  { value: 0 }
 
 	},
 
