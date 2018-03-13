@@ -393,12 +393,12 @@ function setupLights(parent) {
     var pointLight = new THREE.PointLight(0xffffff, 2, 10000);
 
     pointLight.position.set(0, 0, 0);
-    pointLight.castShadow = true;
-    pointLight.shadow.mapSize.width = 2048;
-    pointLight.shadow.mapSize.height = 2048;
-    pointLight.shadow.camera.near = 1;
-    pointLight.shadow.camera.far = 5000;
-    pointLight.shadow.bias = - 0.005;
+    pointLight.castShadow = false;
+    //pointLight.shadow.mapSize.width = 2048;
+    //pointLight.shadow.mapSize.height = 2048;
+    //pointLight.shadow.camera.near = 1;
+    //pointLight.shadow.camera.far = 5000;
+    //pointLight.shadow.bias = - 0.005;
 
 
     parent.add(pointLight);
