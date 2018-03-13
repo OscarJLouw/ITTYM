@@ -8,7 +8,7 @@ var debug, _width, _height, PI, Utils, CUBE_SIZE, GRID, TOTAL_CUBES, WALL_SIZE, 
 
 var composer, renderPass, pass1, pass2, pass3;
 
-
+var clickTimer = null;
 
 var mouse, raycaster, INTERSECTED;
 var textureLoader = new THREE.TextureLoader();
@@ -18,6 +18,8 @@ var spriteMaterial = new THREE.SpriteMaterial({ map: selectionTexture, color: 0x
 var cameraTargetTransform = new THREE.Vector3(0,0,0);
 var cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
 var cameraTarget;
+
+var doubleTap = false;
 
 
 debug = false
@@ -551,8 +553,8 @@ function render() {
         var vector = new THREE.Vector3();
 
         cameraTargetTransform.copy(vector.setFromMatrixPosition(cameraTarget.matrixWorld));
-
-        controls.target.lerp(cameraTargetTransform, clock.getDelta()*5);
+        
+        
         //camera.position.lerp(cameraTargetTransform, clock.getDelta());
         //camera.position.add(cameraTargetTransformPrev.sub(cameraTargetTransform));
 
@@ -562,7 +564,7 @@ function render() {
         var length = new THREE.Vector3(0,0,0);
         length.subVectors(controls.object.position, cameraTargetTransform);
 
-        console.log(length.length());
+        //console.log(length.length());
 
         if(length.length () < 450)
         {
@@ -587,7 +589,7 @@ function render() {
         //camera.position.copy( cameraTarget.position );
         //camera.position.copy( new THREE.Vector3(0,100,0) );
     }
-
+    controls.target.lerp(cameraTargetTransform, clock.getDelta()*5);
     controls.update(clock.getDelta());
     //renderer.render(scene, camera)
     filmPass.uniforms["time"].value += Math.random();
@@ -596,6 +598,7 @@ function render() {
     composer.render(clock.getDelta());
 
     cameraTargetTransformPrev.copy(cameraTargetTransform);
+    doubleTap = false;
 }
 
 
@@ -611,6 +614,18 @@ function onDocumentTouchStart(event) {
 }
 
 function onDocumentMouseDown(event) {
+
+    if (clickTimer == null) {
+        clickTimer = setTimeout(function () {
+            clickTimer = null;
+
+        }, 300)
+    } else {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        doubleTap = true;
+
+    }
 
     event.preventDefault();
 
@@ -642,20 +657,20 @@ function onDocumentMouseDown(event) {
         //controls.target.set(intersects[0].object.position);
         //controls.target.copy(intersects[0].point);
         //camera.position.copy(intersects[0].point);
-    } else if(cameraTarget)
+    } else if(cameraTarget && doubleTap)
     {
-        /*
+        
         //controls.reset();
         controls.minDistance = 500;
         controls.maxDistance = 5000;
         cameraTargetTransform = new THREE.Vector3(0,0,0);
         cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
         //controls.object.position.set( cameraTargetTransform );
-        controls.target.copy( cameraTargetTransform );
+        //controls.target.copy( cameraTargetTransform );
         cameraTarget = null;
-        camera.position.set(0, 0, 2000);
+        //camera.position.set(0, 0, 2000);
         resetCameraTarget();
-        */
+        
     }
 
     /*
