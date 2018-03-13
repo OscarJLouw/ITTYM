@@ -560,11 +560,15 @@ function render() {
         console.log(length.length());
 
         if(length.length () < 450)
+        {
             controls.object.position.add( pan );
-
+            controls.target.add( pan );
+            //cameraTargetTransform.add( pan );
+            //cameraTargetTransformPrev.add( pan );
+        }
 
         //controls.target.add( pan );
-        //cameraTargetTransform.add( pan );
+       
 
         //controls.object.position.add(cameraTargetTransformPrev.sub(cameraTargetTransform));
 
