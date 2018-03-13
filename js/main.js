@@ -15,7 +15,10 @@ var textureLoader = new THREE.TextureLoader();
 var selectionTexture = textureLoader.load("textures/selectionTexture.png");
 var spriteMaterial = new THREE.SpriteMaterial({ map: selectionTexture, color: 0x000000 });
 
+var cameraTargetTransform = new THREE.Vector3(0,0,0);
+var cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
 var cameraTarget;
+
 
 debug = false
 _width = window.innerWidth
@@ -92,7 +95,7 @@ Utils = {
 }
 
 /* -- -- */
-setupCamera(0, 0, 2000)
+setupCamera(0, 0, 2000);
 setupLights(group);
 setupStar(group);
 setupPlanets(group);
@@ -141,7 +144,7 @@ function resizeHandler() {
     renderer.setPixelRatio(pixelRatio);
     composer.setSize(_width * pixelRatio, _height * pixelRatio);
     outlinePass.resolution = new THREE.Vector2(_width * pixelRatio, _height * pixelRatio);
-    //controls.handleResize();
+    controls.handleResize();
     /*
     let pixelRatio = window.devicePixelRatio || 0;
     _width = window.innerWidth * pixelRatio;
@@ -157,8 +160,13 @@ function resizeHandler() {
 /* -- CAMERA -- */
 function setupCamera(x, y, z) {
     camera.position.set(x, y, z);
+    resetCameraTarget();
     scene.add(camera);
 
+}
+
+function resetCameraTarget(){
+    cameraTargetTransform.set(0,0,0);
 }
 
 function setupStar(parent) {
@@ -531,12 +539,32 @@ function render() {
     checkIntersection();
     
     if (cameraTarget) {
-        controls.enableZoom = false;
-        controls.minDistance = 200;
-        controls.maxDistance = 200;
+        //controls.noZoom = true;
+        //controls.minDistance = 200;
+        //controls.maxDistance = 200;
 
         var vector = new THREE.Vector3();
-        controls.target.copy(vector.setFromMatrixPosition(cameraTarget.matrixWorld));
+
+        cameraTargetTransform.copy(vector.setFromMatrixPosition(cameraTarget.matrixWorld));
+
+        //controls.target.lerp(cameraTargetTransform, clock.getDelta());
+        //camera.position.lerp(cameraTargetTransform, clock.getDelta());
+        //camera.position.add(cameraTargetTransformPrev.sub(cameraTargetTransform));
+
+        var pan = new THREE.Vector3(0,0,0);
+        pan.subVectors( cameraTargetTransform, cameraTargetTransformPrev );
+        controls.object.position.add( pan );
+        controls.target.add( pan );
+
+        //controls.object.position.add(cameraTargetTransformPrev.sub(cameraTargetTransform));
+
+        controls.minDistance = THREE.Math.lerp(controls.minDistance, 200, 0.05);
+        controls.maxDistance = THREE.Math.lerp(controls.maxDistance, 200, 0.05);
+
+        console.log("Min distance: " + controls.minDistance);
+        console.log("Max distance: " + controls.maxDistance);
+        //controls.target.add(cameraTargetTransform.sub(cameraTargetTransformPrev))
+        //camera.position.add(cameraTargetTransformPrev.sub(cameraTargetTransform));
         //camera.position.copy( cameraTarget.position );
         //camera.position.copy( new THREE.Vector3(0,100,0) );
     }
@@ -544,6 +572,8 @@ function render() {
     controls.update(clock.getDelta());
     //renderer.render(scene, camera)
     composer.render();
+
+    cameraTargetTransformPrev.copy(cameraTargetTransform);
 }
 
 
@@ -570,23 +600,40 @@ function onDocumentMouseDown(event) {
     var intersects = raycaster.intersectObjects(planetObjects, true);
 
     if (intersects.length > 0) {
-
+        controls.minDistance = 500;
+        controls.maxDistance = 5000;
         //intersects[0].object.material.color.setHex(Math.random() * 0xffffff);
 
-        var particle = new THREE.Sprite(spriteMaterial);
+        //var particle = new THREE.Sprite(spriteMaterial);
 
         var vector = new THREE.Vector3().copy(intersects[0].point);
         intersects[0].object.worldToLocal(vector);
 
-        particle.position.copy(vector);
-        particle.scale.x = particle.scale.y = 5;
-        intersects[0].object.add(particle);
+        //particle.position.copy(vector);
+        //particle.scale.x = particle.scale.y = 5;
+        //intersects[0].object.add(particle);
 
         cameraTarget = intersects[0].object;
 
+        
+
         //controls.target.set(intersects[0].object.position);
-        controls.target.copy(intersects[0].point);
-        camera.position.copy(intersects[0].point);
+        //controls.target.copy(intersects[0].point);
+        //camera.position.copy(intersects[0].point);
+    } else if(cameraTarget)
+    {
+        /*
+        //controls.reset();
+        controls.minDistance = 500;
+        controls.maxDistance = 5000;
+        cameraTargetTransform = new THREE.Vector3(0,0,0);
+        cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
+        //controls.object.position.set( cameraTargetTransform );
+        controls.target.copy( cameraTargetTransform );
+        cameraTarget = null;
+        camera.position.set(0, 0, 2000);
+        resetCameraTarget();
+        */
     }
 
     /*
