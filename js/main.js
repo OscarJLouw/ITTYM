@@ -547,22 +547,32 @@ function render() {
 
         cameraTargetTransform.copy(vector.setFromMatrixPosition(cameraTarget.matrixWorld));
 
-        //controls.target.lerp(cameraTargetTransform, clock.getDelta());
+        controls.target.lerp(cameraTargetTransform, clock.getDelta()*5);
         //camera.position.lerp(cameraTargetTransform, clock.getDelta());
         //camera.position.add(cameraTargetTransformPrev.sub(cameraTargetTransform));
 
         var pan = new THREE.Vector3(0,0,0);
         pan.subVectors( cameraTargetTransform, cameraTargetTransformPrev );
-        controls.object.position.add( pan );
-        controls.target.add( pan );
+
+        var length = new THREE.Vector3(0,0,0);
+        length.subVectors(controls.object.position, cameraTargetTransform);
+
+        console.log(length.length());
+
+        if(length.length () < 450)
+            controls.object.position.add( pan );
+
+
+        //controls.target.add( pan );
+        //cameraTargetTransform.add( pan );
 
         //controls.object.position.add(cameraTargetTransformPrev.sub(cameraTargetTransform));
 
         controls.minDistance = THREE.Math.lerp(controls.minDistance, 200, 0.05);
-        controls.maxDistance = THREE.Math.lerp(controls.maxDistance, 200, 0.05);
+        controls.maxDistance = THREE.Math.lerp(controls.maxDistance, 400, 0.05);
 
-        console.log("Min distance: " + controls.minDistance);
-        console.log("Max distance: " + controls.maxDistance);
+        //console.log("Min distance: " + controls.minDistance);
+        //console.log("Max distance: " + controls.maxDistance);
         //controls.target.add(cameraTargetTransform.sub(cameraTargetTransformPrev))
         //camera.position.add(cameraTargetTransformPrev.sub(cameraTargetTransform));
         //camera.position.copy( cameraTarget.position );
