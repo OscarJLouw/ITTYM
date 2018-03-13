@@ -462,6 +462,11 @@ function setupRenderer(parent) {
     */
 
     filmPass = new THREE.ShaderPass(THREE.FilmShader);
+    filmPass.uniforms["time"].value = 0.8;
+    filmPass.uniforms["nIntensity"].value = 0.3;
+    filmPass.uniforms["sIntensity"].value = 0.3;
+    filmPass.uniforms["grayscale"].value = false;
+
     rgbShiftPass = new THREE.ShaderPass(THREE.RGBShiftShader);
     rgbShiftPass.uniforms["amount"].value = 0.001;
 
@@ -474,14 +479,14 @@ function setupRenderer(parent) {
 
     //renderPass.renderToScreen = true;
     //sobelPass.renderToScreen = true;
-    filmPass.renderToScreen = true;
-    //rgbShiftPass.renderToScreen = true;
+    //filmPass.renderToScreen = true;
+    rgbShiftPass.renderToScreen = true;
 
     composer.addPass(renderPass);
     //composer.addPass(outlinePass);
     //composer.addPass(sobelPass);
     composer.addPass(filmPass);
-    //composer.addPass(rgbShiftPass);
+    composer.addPass(rgbShiftPass);
 }
 
 
@@ -585,7 +590,10 @@ function render() {
 
     controls.update(clock.getDelta());
     //renderer.render(scene, camera)
-    composer.render();
+    filmPass.uniforms["time"].value += Math.random();
+    if(filmPass.uniforms["time"].value > 1)
+        filmPass.uniforms["time"].value = Math.random();
+    composer.render(clock.getDelta());
 
     cameraTargetTransformPrev.copy(cameraTargetTransform);
 }
