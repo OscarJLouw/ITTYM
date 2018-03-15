@@ -48,9 +48,11 @@ var planetColors = [
 var planetGeometries = [];
 var planetObjects = [];
 renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
-camera = new THREE.PerspectiveCamera(45, (_width / _height), 0.1, 20000)
+camera = new THREE.PerspectiveCamera(45, (_width / _height), 0.1, 30000)
 
 var clock = new THREE.Clock();
+
+var controlMaxDistance = 15000;
 
 controls = new THREE.TrackballControls(camera);
 controls.rotateSpeed = 1.5;
@@ -61,7 +63,7 @@ controls.noPan = true;
 controls.staticMoving = false;
 controls.dynamicDampingFactor = 0.15;
 controls.minDistance = 500;
-controls.maxDistance = 5000;
+controls.maxDistance = controlMaxDistance;
 controls.maxPolarAngle = PI / 2 - 0.05;
 controls.autoRotate = true;
 controls.autoRotateSpeed = -0.1;
@@ -358,16 +360,31 @@ function setupPlanets(parent) {
         //parent.add(planet);
         planetObjects.push(planet);
 
+        var vertexCount = 90;
+        var circleGeom = new THREE.CircleGeometry(orbitRadius, vertexCount);
+        var orbitGeom = new THREE.Geometry();
+
+        for(var i = 1; i<=vertexCount; i++)
+        {
+            orbitGeom.vertices.push( circleGeom.vertices[i].clone() );
+        }
+        orbitGeom.vertices.push(orbitGeom.vertices[0].clone());
+        
+        //orbitGeom.vertices.shift();
+
         var orbit = new THREE.Line(
-            new THREE.CircleGeometry(orbitRadius, 90),
+            orbitGeom,
             new THREE.MeshBasicMaterial({
                 color: planetColors[type],
                 transparent: true,
-                opacity: .4,
+                opacity: .3,
                 side: THREE.BackSide
             })
         );
-        orbit.geometry.vertices.shift();
+
+        
+        //orbit.geometry.vertices.push( orbit.geometry.vertices[0].clone() ); 
+        
 
         //orbit.rotation.x = orbitInitialRotation.x;
         //orbit.rotation.y = orbitInitialRotation.y;
@@ -638,7 +655,7 @@ function onDocumentMouseDown(event) {
 
     if (intersects.length > 0) {
         controls.minDistance = 500;
-        controls.maxDistance = 5000;
+        controls.maxDistance = controlMaxDistance;
         //intersects[0].object.material.color.setHex(Math.random() * 0xffffff);
 
         //var particle = new THREE.Sprite(spriteMaterial);
@@ -662,7 +679,7 @@ function onDocumentMouseDown(event) {
         
         //controls.reset();
         controls.minDistance = 500;
-        controls.maxDistance = 5000;
+        controls.maxDistance = controlMaxDistance;
         cameraTargetTransform = new THREE.Vector3(0,0,0);
         cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
         //controls.object.position.set( cameraTargetTransform );
