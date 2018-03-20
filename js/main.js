@@ -12,8 +12,21 @@ var clickTimer = null;
 
 var mouse, raycaster, INTERSECTED;
 var textureLoader = new THREE.TextureLoader();
-var selectionTexture = textureLoader.load("textures/selectionTexture.png");
-var spriteMaterial = new THREE.SpriteMaterial({ map: selectionTexture, color: 0x000000 });
+
+var iconTextures = [
+    textureLoader.load("textures/icon1.png"),
+    textureLoader.load("textures/icon2.png"),
+    textureLoader.load("textures/icon3.png"),
+    textureLoader.load("textures/icon4.png"),
+    textureLoader.load("textures/icon5.png"),
+    textureLoader.load("textures/icon6.png"),
+    textureLoader.load("textures/icon7.png"),
+    textureLoader.load("textures/icon8.png"),
+    textureLoader.load("textures/icon9.png")
+];
+
+
+
 
 var cameraTargetTransform = new THREE.Vector3(0,0,0);
 var cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
@@ -21,6 +34,7 @@ var cameraTarget;
 
 var doubleTap = false;
 
+var projector = new THREE.Projector();
 
 debug = false
 _width = window.innerWidth
@@ -46,6 +60,7 @@ var planetColors = [
 ];
 
 var planetGeometries = [];
+var iconSprites  = [];
 var planetObjects = [];
 renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
 camera = new THREE.PerspectiveCamera(45, (_width / _height), 0.1, 30000)
@@ -62,7 +77,7 @@ controls.noZoom = false;
 controls.noPan = true;
 controls.staticMoving = false;
 controls.dynamicDampingFactor = 0.15;
-controls.minDistance = 500;
+controls.minDistance = 200;
 controls.maxDistance = controlMaxDistance;
 controls.maxPolarAngle = PI / 2 - 0.05;
 controls.autoRotate = true;
@@ -196,7 +211,8 @@ function setupStar(parent) {
             new THREE.MeshBasicMaterial({
                 color: starColor,
                 transparent: true,
-                opacity: 0.5
+                opacity: 0.5,
+                depthWrite: false
             })
         );
         starGlow.castShadow = false;
@@ -228,7 +244,7 @@ function setupPlanets(parent) {
     for (var p = 0, radii = 0; p < 35; p++) {
 
         var type = Math.floor(Math.random() * planetColors.length);
-        var size = THREE.Math.randInt(10, 30) + 10 * Math.sin(p / 7);
+        var size = THREE.Math.clamp(THREE.Math.randInt(10, 30) + 10 * Math.sin(p / 7), 20, 100);
 
         var planetShape = Math.floor(Math.random() * planetShapes.length);
 
@@ -249,6 +265,8 @@ function setupPlanets(parent) {
         var orbitSpeed = THREE.Math.randFloat(50 + p * 5, 200 + p * 5);
         //planet.position.set(planet.orbitRadius, 0, 0);
 
+
+        
         switch (planetShapes[planetShape]) {
             case "SphereGeometry":
                 geometry = new THREE.SphereGeometry(size, THREE.Math.randInt(3, 10), THREE.Math.randInt(2, 10));
@@ -291,8 +309,22 @@ function setupPlanets(parent) {
         planetGeom.position.set(orbitRadius, 0, 0);
 
         planet.add(planetGeom);
-        planetGeometries.push(planetGeom);
 
+        var spriteMaterial = new THREE.SpriteMaterial({ map: iconTextures[THREE.Math.randInt(0,iconTextures.length-1)], color: 0xffffff });
+        var iconSprite = new THREE.Sprite(spriteMaterial);
+        //iconSprite.position.set(orbitRadius,50,0);
+        //particle.position.set(0,1,0);
+        iconSprite.scale.x = iconSprite.scale.y = 30;
+        //planet.add(iconSprite);
+        iconSprite.size = size;
+        
+        
+
+        planetGeometries.push(planetGeom);
+        iconSprite.index = planetGeometries.length;
+        iconSprites.push(iconSprite);
+        scene.add(iconSprite);
+        
         configRotation = {
             ease: Power0.easeNone,
             delay: 0,
@@ -315,7 +347,8 @@ function setupPlanets(parent) {
                     color: planetColors[3],
                     flatShading: true,
                     transparent: true,
-                    opacity: 0.3
+                    opacity: 0.3,
+                    depthWrite: false
                 })
             );
             atmoGeom.receiveShadow = false;
@@ -366,9 +399,9 @@ function setupPlanets(parent) {
 
         for(var i = 1; i<=vertexCount; i++)
         {
-            orbitGeom.vertices.push( circleGeom.vertices[i].clone() );
+            orbitGeom.vertices.push( circleGeom.vertices[i] );
         }
-        orbitGeom.vertices.push(orbitGeom.vertices[0].clone());
+        orbitGeom.vertices.push(orbitGeom.vertices[0]);
         
         //orbitGeom.vertices.shift();
 
@@ -395,6 +428,8 @@ function setupPlanets(parent) {
         //orbit.rotation.y = THREE.Math.degToRad(Math.random() * 180);
         //orbit.rotation.z = THREE.Math.degToRad(Math.random() * 180);
         //parent.add(orbit);
+
+        
 
         planetWithOrbit.add(planet);
         planetWithOrbit.add(orbit);
@@ -522,7 +557,7 @@ function onTouchMove(event) {
     }
     mouse.x = (x / window.innerWidth) * 2 - 1;
     mouse.y = - (y / window.innerHeight) * 2 + 1;
-    checkIntersection();
+    //checkIntersection();
 }
 
 function addSelectedObject(object) {
@@ -560,7 +595,7 @@ function checkIntersection() {
 
 
 function render() {
-    checkIntersection();
+    //checkIntersection();
     
     if (cameraTarget) {
         //controls.noZoom = true;
@@ -606,7 +641,47 @@ function render() {
         //camera.position.copy( cameraTarget.position );
         //camera.position.copy( new THREE.Vector3(0,100,0) );
     }
+
+    // put icons above each planet
+    for(var i = 0; i<iconSprites.length; i++)
+    {
+        var targetPosition = new THREE.Vector3();
+        targetPosition = targetPosition.setFromMatrixPosition( planetGeometries[i].matrixWorld );
+
+        var eyeDistance = targetPosition.distanceTo(camera.position);
+
+
+        
+        targetPosition.add(camera.up.clone().multiplyScalar(eyeDistance/80).clampLength(40 + iconSprites[i].size * 3, 150));
+        iconSprites[i].position.set(targetPosition.x, targetPosition.y, targetPosition.z);//.add(new THREE.Vector3(10,10,10)));
+        iconSprites[i].scale.x = iconSprites[i].scale.y = THREE.Math.clamp(eyeDistance/80, 40, 300);
+
+
+        /*
+        //var width = 640, height = 480;
+        var widthHalf = _width / 2, heightHalf = _height / 2;
+
+        var vector = new THREE.Vector3();
+        
+        projector.projectVector( vector.setFromMatrixPosition( planetGeometries[i].matrixWorld ), camera );
+
+        vector.x = ( vector.x * widthHalf ) + widthHalf;
+        vector.y = - ( vector.y * heightHalf ) + heightHalf;
+
+        if(vector.sub(new THREE.Vector3(widthHalf, heightHalf, 0)).length() > widthHalf/3)
+        {
+            //iconSprites[i].scale.multiplyScalar(0.9);
+            //iconSprites[i].material.opacity = 0.5;
+        } else {
+            //console.log(vector.length());
+            //iconSprites[i].scale.multiplyScalar(1.2);
+            //iconSprites[i].material.opacity = 1;
+        }
+        */
+    }
+    //console.log("Pre: " + controls.object.up.x);
     controls.target.lerp(cameraTargetTransform, clock.getDelta()*5);
+    
     controls.update(clock.getDelta());
     //renderer.render(scene, camera)
     filmPass.uniforms["time"].value += Math.random();
@@ -616,6 +691,7 @@ function render() {
 
     cameraTargetTransformPrev.copy(cameraTargetTransform);
     doubleTap = false;
+    //console.log("Post: " + controls.object.up.x);
 }
 
 
@@ -652,20 +728,25 @@ function onDocumentMouseDown(event) {
     raycaster.setFromCamera(mouse, camera);
 
     var intersects = raycaster.intersectObjects(planetObjects, true);
+    var intersects2 = raycaster.intersectObjects(iconSprites, false);
 
     if (intersects.length > 0) {
-        controls.minDistance = 500;
+        controls.minDistance = 200;
         controls.maxDistance = controlMaxDistance;
         //intersects[0].object.material.color.setHex(Math.random() * 0xffffff);
 
-        //var particle = new THREE.Sprite(spriteMaterial);
+
+        /*
 
         var vector = new THREE.Vector3().copy(intersects[0].point);
         intersects[0].object.worldToLocal(vector);
-
-        //particle.position.copy(vector);
-        //particle.scale.x = particle.scale.y = 5;
-        //intersects[0].object.add(particle);
+        
+        
+        var particle = new THREE.Sprite(spriteMaterial);
+        particle.position.copy(vector);
+        particle.scale.x = particle.scale.y = 5;
+        intersects[0].object.add(particle);
+        */
 
         cameraTarget = intersects[0].object;
 
@@ -674,6 +755,14 @@ function onDocumentMouseDown(event) {
         //controls.target.set(intersects[0].object.position);
         //controls.target.copy(intersects[0].point);
         //camera.position.copy(intersects[0].point);
+    } else if(intersects2.length > 0)
+    {
+        controls.minDistance = 200;
+        controls.maxDistance = controlMaxDistance;
+
+        cameraTarget = intersects2[0].object;
+        //cameraTarget = planetObjects[intersects2[0].object.index];
+
     } else if(cameraTarget && doubleTap)
     {
         
@@ -686,7 +775,7 @@ function onDocumentMouseDown(event) {
         //controls.target.copy( cameraTargetTransform );
         cameraTarget = null;
         //camera.position.set(0, 0, 2000);
-        resetCameraTarget();
+        //resetCameraTarget();
         
     }
 
