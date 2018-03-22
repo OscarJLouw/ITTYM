@@ -806,6 +806,7 @@ function RandomRangeExcept(min, max, except) {
 
 function playVideo()
 {
+    /*
     var video = document.querySelector('#player');
     var videoContainer = document.querySelector('#playerContainer');
 
@@ -827,6 +828,24 @@ function playVideo()
     
     plyr.setup(video);
     loadedVideo = true;
+    */
+   var videoContainer = document.querySelector('#playerContainer');
+
+    videoContainer.style.display = "block";
+
+   var options = {
+        id: 198639196,
+        width: 1080,
+        loop: false
+    };
+
+    var player = new Vimeo.Player('video-player', options);
+
+    //player.setVolume(0);
+
+    player.on('play', function() {
+        console.log('played the video!');
+    });
 }
 
 function closeVideo()
