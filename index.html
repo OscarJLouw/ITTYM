@@ -16,9 +16,13 @@ localhost:8000
 		
 		<link rel="stylesheet" href="css/normalize.css" type="text/css">
 		<link rel="stylesheet" href="css/style.css" type="text/css">
+		<link rel="stylesheet" href="css/plyr.css" type="text/css">
 	</head>
 	<body>
 		<div>
+		</div>
+		<div class="video-container" id="playerContainer">
+			<video preload="none" id="player" controls crossOrigin="anonymous"></video>
 		</div>
 		<script type="text/javascript" src="js/three.min.js"></script>
 		<script type="text/javascript" src="js/TweenMax.min.js"></script>
@@ -39,6 +43,9 @@ localhost:8000
 		<!--<script type="text/javascript" src="js/shaders/SobelOperatorShader.js"></script>-->
 		<!--<script type="text/javascript" src="js/shaders/TechnicolorShader.js"></script>-->
 		
+		<script type="text/javascript" src="js/video/plyr.js"></script>
+		<script type="text/javascript" src="js/video/hls.js"></script>
+
 		<script type="text/javascript" src="js/main.js"></script>
 	</body>
 </html>

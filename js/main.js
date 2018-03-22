@@ -25,8 +25,10 @@ var iconTextures = [
     textureLoader.load("textures/icon9.png")
 ];
 
-
-
+if (Hls.isSupported()) {
+    var hls = new Hls();
+}
+var loadedVideo = false;
 
 var cameraTargetTransform = new THREE.Vector3(0,0,0);
 var cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
@@ -598,6 +600,8 @@ function render() {
     //checkIntersection();
     
     if (cameraTarget) {
+        if(!loadedVideo)
+            playVideo();
         //controls.noZoom = true;
         //controls.minDistance = 200;
         //controls.maxDistance = 200;
@@ -682,6 +686,8 @@ function render() {
     //console.log("Pre: " + controls.object.up.x);
     controls.target.lerp(cameraTargetTransform, clock.getDelta()*5);
     
+    
+
     controls.update(clock.getDelta());
     //renderer.render(scene, camera)
     filmPass.uniforms["time"].value += Math.random();
@@ -765,7 +771,7 @@ function onDocumentMouseDown(event) {
 
     } else if(cameraTarget && doubleTap)
     {
-        
+        closeVideo();
         //controls.reset();
         controls.minDistance = 500;
         controls.maxDistance = controlMaxDistance;
@@ -795,4 +801,45 @@ function RandomRangeExcept(min, max, except) {
         var number = THREE.Math.randInt(min, max);
     } while (number == except);
     return number;
+}
+
+
+function playVideo()
+{
+    var video = document.querySelector('#player');
+    var videoContainer = document.querySelector('#playerContainer');
+
+    videoContainer.style.display = "block";
+    video.style.display = "block";
+
+    poster="";
+
+    if (Hls.isSupported()) {
+        hls.loadSource("./streams/fsk.m3u8");
+
+        //hls.loadSource('//storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd');
+        //hls.loadSource('https://content.jwplatform.com/manifests/vM7nH0Kl.m3u8');
+
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED,function() {
+        });
+    }
+    
+    plyr.setup(video);
+    loadedVideo = true;
+}
+
+function closeVideo()
+{
+    if (Hls.isSupported()) {
+        hls.stopLoad();
+        hls.detachMedia();
+    }
+
+    var video = document.querySelector('#player');
+    var videoContainer = document.querySelector('#playerContainer');
+
+    videoContainer.style.display = "none";
+    video.style.display = "none";
+    loadedVideo = false;
 }
