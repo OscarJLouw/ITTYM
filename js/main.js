@@ -815,7 +815,7 @@ function playVideo()
     poster="";
 
     if (Hls.isSupported()) {
-        hls.loadSource("./streams/fsk.m3u8");
+        hls.loadSource("./streams/birst/boredomisragespreadthin.m3u8");
 
         //hls.loadSource('//storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd');
         //hls.loadSource('https://content.jwplatform.com/manifests/vM7nH0Kl.m3u8');

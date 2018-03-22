@@ -43,6 +43,7 @@ video {
 
 .plyr__controls{
   background: none !important;
+  padding: 0px !important;
 }
 .plyr__controls button{
   color: black !important;
