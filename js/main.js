@@ -785,7 +785,7 @@ function onDocumentTouchStart(event) {
 
     event.clientX = event.touches[0].clientX;
     event.clientY = event.touches[0].clientY;
-    onDocumentMouseDown(event);
+    onDocumentMouseUp(event);
 
 }
 
@@ -795,7 +795,7 @@ function onDocumentTouchEnd(event) {
 
     event.clientX = event.touches[0].clientX;
     event.clientY = event.touches[0].clientY;
-    onDocumentMouseUp(event);
+    //onDocumentMouseUp(event);
 
 }
 
@@ -957,18 +957,22 @@ function playVideo(videoIndex)
    var options = {
        id: videoList[videoIndex],
        autoplay: true,
-        byline: false,
-        color: 000000,
-        playsinline: false,
-        title: false,
-        background: false
+       byline: false,
+       color: '#ffffff',
+       playsinline: false,
+       title: false,
+       background: false
     };
 
    player = new Vimeo.Player('playerContainer', options);
 
+   player.setColor('#ffffff');
+
    player.loadVideo(videoList[videoIndex]);
-   console.log(videoIndex);
+   
+   //console.log(videoIndex);
    loadedVideo = true;
+
 }
 
 function closeVideo()
