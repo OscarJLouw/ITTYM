@@ -13,6 +13,8 @@ var clickTimer = null;
 var mouse, raycaster, INTERSECTED;
 var textureLoader = new THREE.TextureLoader();
 
+var numPlanets = 9;    // 35 atm
+
 var iconTextures = [
     textureLoader.load("textures/icon1.png"),
     textureLoader.load("textures/icon2.png"),
@@ -25,10 +27,26 @@ var iconTextures = [
     textureLoader.load("textures/icon9.png")
 ];
 
+var videoList = [
+    203757114,
+    215880646,
+    86855268,
+    72167244,
+    22525981,
+    12318402,
+    7500745,
+    141935073,
+    164429908
+];
+
 if (Hls.isSupported()) {
     var hls = new Hls();
 }
 var loadedVideo = false;
+
+var draggedPastMinDistance = false;
+var draggedDistance = 0;
+var dragging = false;
 
 var cameraTargetTransform = new THREE.Vector3(0,0,0);
 var cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
@@ -139,8 +157,28 @@ controls.addEventListener('start', function () {
 });
 
 document.addEventListener('mousedown', onDocumentMouseDown, false);
+document.addEventListener('mouseup', onDocumentMouseUp, false);
 document.addEventListener('touchstart', onDocumentTouchStart, false);
+document.addEventListener('touchend', onDocumentTouchEnd, false);
+document.addEventListener('touchcancel', onDocumentTouchCancel, false);
 
+
+document.addEventListener("keydown", onDocumentKeyDown, false);
+
+var player;
+
+function onDocumentKeyDown(event) {
+    var keyCode = event.which;
+    switch(keyCode)
+    {
+        case 27:
+            console.log("ESC");
+            closeVideo();
+        break;
+        default:
+        break;
+    }
+}
 
 
 /* -- -- */
@@ -230,7 +268,35 @@ function setupStar(parent) {
     }
 }
 
+function shuffleArrays()
+{
+    videoList = shuffle(videoList);
+    iconTextures = shuffle(iconTextures);
+}
+
+function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+  
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
+  
+      // Pick a remaining element...
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex -= 1;
+  
+      // And swap it with the current element.
+      temporaryValue = array[currentIndex];
+      array[currentIndex] = array[randomIndex];
+      array[randomIndex] = temporaryValue;
+    }
+  
+    return array;
+}
+  
+
 function setupPlanets(parent) {
+    shuffleArrays();
+    
     var planetShapes = [
         "SphereGeometry",
         "ConeGeometry",
@@ -243,7 +309,7 @@ function setupPlanets(parent) {
 
     var rotationAxes = ['x', 'y', 'z'];
 
-    for (var p = 0, radii = 0; p < 35; p++) {
+    for (var p = 0, radii = 0; p < numPlanets; p++) {
 
         var type = Math.floor(Math.random() * planetColors.length);
         var size = THREE.Math.clamp(THREE.Math.randInt(10, 30) + 10 * Math.sin(p / 7), 20, 100);
@@ -268,6 +334,7 @@ function setupPlanets(parent) {
         //planet.position.set(planet.orbitRadius, 0, 0);
 
 
+        
         
         switch (planetShapes[planetShape]) {
             case "SphereGeometry":
@@ -310,9 +377,11 @@ function setupPlanets(parent) {
 
         planetGeom.position.set(orbitRadius, 0, 0);
 
+
+
         planet.add(planetGeom);
 
-        var spriteMaterial = new THREE.SpriteMaterial({ map: iconTextures[THREE.Math.randInt(0,iconTextures.length-1)], color: 0xffffff });
+        var spriteMaterial = new THREE.SpriteMaterial({ map: iconTextures[p], color: 0xffffff });
         var iconSprite = new THREE.Sprite(spriteMaterial);
         //iconSprite.position.set(orbitRadius,50,0);
         //particle.position.set(0,1,0);
@@ -325,6 +394,9 @@ function setupPlanets(parent) {
         planetGeometries.push(planetGeom);
         iconSprite.index = planetGeometries.length;
         iconSprites.push(iconSprite);
+
+
+
         scene.add(iconSprite);
         
         configRotation = {
@@ -342,6 +414,10 @@ function setupPlanets(parent) {
         )
 
         // ATMOSPHERE
+
+        planet.planetIndex = p;
+        planetGeom.planetIndex = p;
+        iconSprite.planetIndex = p;
 
         if (type > 1 && Math.random() > 0.5) {
             var atmoGeom = new THREE.Mesh(geometry.clone().scale(1.2, 1.2, 1.2),
@@ -363,7 +439,7 @@ function setupPlanets(parent) {
             )
 
 
-
+            atmoGeom.planetIndex = p;
             atmoGeom.position.set(orbitRadius, 0, 0);
 
         }
@@ -548,6 +624,7 @@ function setupRenderer(parent) {
 
 window.addEventListener('mousemove', onTouchMove);
 window.addEventListener('touchmove', onTouchMove);
+
 function onTouchMove(event) {
     var x, y;
     if (event.changedTouches) {
@@ -601,7 +678,7 @@ function render() {
     
     if (cameraTarget) {
         if(!loadedVideo)
-            playVideo();
+            playVideo(cameraTarget.planetIndex);
         //controls.noZoom = true;
         //controls.minDistance = 200;
         //controls.maxDistance = 200;
@@ -712,8 +789,42 @@ function onDocumentTouchStart(event) {
 
 }
 
+function onDocumentTouchEnd(event) {
+
+    event.preventDefault();
+
+    event.clientX = event.touches[0].clientX;
+    event.clientY = event.touches[0].clientY;
+    onDocumentMouseUp(event);
+
+}
+
+function onDocumentTouchCancel(event) {
+
+    event.preventDefault();
+
+    event.clientX = event.touches[0].clientX;
+    event.clientY = event.touches[0].clientY;
+    onDocumentMouseUp(event);
+
+}
+
 function onDocumentMouseDown(event) {
 
+    
+
+    /*
+    // Parse all the faces
+    for ( var i in intersects ) {
+
+        intersects[ i ].face.material[ 0 ].color.setHex( Math.random() * 0xffffff | 0x80000000 );
+
+    }
+    */
+}
+
+
+function onDocumentMouseUp(event) {
     if (clickTimer == null) {
         clickTimer = setTimeout(function () {
             clickTimer = null;
@@ -784,17 +895,7 @@ function onDocumentMouseDown(event) {
         //resetCameraTarget();
         
     }
-
-    /*
-    // Parse all the faces
-    for ( var i in intersects ) {
-
-        intersects[ i ].face.material[ 0 ].color.setHex( Math.random() * 0xffffff | 0x80000000 );
-
-    }
-    */
 }
-
 
 function RandomRangeExcept(min, max, except) {
     do {
@@ -804,7 +905,7 @@ function RandomRangeExcept(min, max, except) {
 }
 
 
-function playVideo()
+function playVideo(videoIndex)
 {
     /*
     var video = document.querySelector('#player');
@@ -829,13 +930,13 @@ function playVideo()
     plyr.setup(video);
     loadedVideo = true;
     */
+   /*
    var videoContainer = document.querySelector('#playerContainer');
 
     videoContainer.style.display = "block";
 
    var options = {
         id: 198639196,
-        width: 1080,
         loop: false
     };
 
@@ -846,19 +947,49 @@ function playVideo()
     player.on('play', function() {
         console.log('played the video!');
     });
+    */
+
+   var videoContainer = document.querySelector('#playerContainer');
+
+   videoContainer.style.display = "block";
+
+   //var iframe = document.querySelector('iframe');
+   var options = {
+       id: videoList[videoIndex],
+       autoplay: true,
+        byline: false,
+        color: 000000,
+        playsinline: false,
+        title: false,
+        background: false
+    };
+
+   player = new Vimeo.Player('playerContainer', options);
+
+   player.loadVideo(videoList[videoIndex]);
+   console.log(videoIndex);
+   loadedVideo = true;
 }
 
 function closeVideo()
 {
+    controls.minDistance = 500;
+    controls.maxDistance = controlMaxDistance;
+    cameraTargetTransform = new THREE.Vector3(0,0,0);
+    cameraTargetTransformPrev = new THREE.Vector3(0,0,0);
+    cameraTarget = null;
+
+    player.unload();
+    /*
     if (Hls.isSupported()) {
         hls.stopLoad();
         hls.detachMedia();
     }
-
-    var video = document.querySelector('#player');
+    */
+    //var video = document.querySelector('#player');
     var videoContainer = document.querySelector('#playerContainer');
 
     videoContainer.style.display = "none";
-    video.style.display = "none";
+    //video.style.display = "none";
     loadedVideo = false;
 }
